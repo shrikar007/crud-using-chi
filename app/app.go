@@ -51,7 +51,7 @@ func Initialize() (r chi.Router, conf *viper.Viper) {
 		r.Use(muser.IsAuthorized)
 		r.Route("/users", func(r chi.Router) {
 			r.Get("/{id}", user.GetProfile())
-			//r.Put("/", custMiddleware.UserAuthorized(controller.UpdateUser()))
+			r.Put("/{id}", user.UpdateProfile())
 		})
 	})
 	return

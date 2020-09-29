@@ -34,16 +34,16 @@ func (mu *MiddlewareUser)IsAuthorized(endpoint http.Handler) http.Handler {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 					return nil, fmt.Errorf("Something went wrong")
 				}
-				return mu.Conf.GetString("jwt.jwt_signing_key"), nil
+				return []byte(mu.Conf.GetString("jwt.jwt_signing_key")), nil
 			})
 
 			if err != nil {
 				mu.Logger.Errorf("Error occured : %v", err)
 			}
-
-			if token.Valid {
+			mu.DB.Exec(&user, "SELECT * FROM users WHERE id=?", Id)
+			if token.Valid  {
 				token, _ := jwt.ParseWithClaims(token.Raw, &models.MyCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-					return mu.Conf.GetString("jwt.jwt_signing_key"), nil
+					return []byte(mu.Conf.GetString("jwt.jwt_signing_key")), nil
 				})
 
 				models.Claims = token.Claims.(*models.MyCustomClaims)

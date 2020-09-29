@@ -29,19 +29,27 @@ func NewUser(conf *viper.Viper, logger *logrus.Logger, db *sqlx.DB) (u *Users) {
 
 func (u *Users) Login() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		login := models.Login{}
+		var (
+			login     = models.Login{}
+			modelUser = models.NewUserModel(u.DB)
+			modelAuth = models.NewAuthModel(u.DB)
+		)
 		decoder := json.NewDecoder(r.Body)
 		if err := decoder.Decode(&login); err != nil {
 			common.RespondError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		user := models.User{}
-		err := u.DB.Get(&user, "SELECT * FROM users WHERE email=? AND password=?", login.Email, login.Password)
+		user, err := modelUser.GetUser(login)
 		if err != nil {
 			common.RespondError(w, http.StatusNotFound, err.Error())
 			return
 		}
-		loginResponse := models.LoginResponse{Token: common.GenerateJWT(user,u.Conf.GetString("jwt.jwt_signing_key"))}
+		loginResponse := models.LoginResponse{Token: common.GenerateJWT(user, u.Conf.GetString("jwt.jwt_signing_key"))}
+		err = modelAuth.StoreAuth(loginResponse)
+		if err != nil {
+			common.RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
 
 		common.RespondJSON(w, http.StatusOK, loginResponse)
 	}
@@ -49,32 +57,66 @@ func (u *Users) Login() http.HandlerFunc {
 
 func (u *Users) SignUp() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		user := models.User{}
+		var (
+			user      = models.User{}
+			modelUser = models.NewUserModel(u.DB)
+		)
 		decoder := json.NewDecoder(r.Body)
 		if err := decoder.Decode(&user); err != nil {
 			common.RespondError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		defer r.Body.Close()
-
-		_, err := u.DB.Exec(`INSERT INTO users (first_name,middle_name,password,last_name, email,gender,mobile) VALUES (?,?,?,?,?,?,?)`, user.FirstName, user.MiddleName, user.Password, user.LastName, user.Email, user.Gender, user.Mobile)
+		err := modelUser.StoreUser(user)
 		if err != nil {
 			common.RespondError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		common.RespondJSON(w, http.StatusCreated, "Signed Up successful")
+		common.RespondJSON(w, http.StatusCreated, map[string]string{"message": "Signed Up successful"})
 	}
 }
 
 func (u *Users) GetProfile() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var user models.User
+		var (
+			user      models.User
+			modelUser = models.NewUserModel(u.DB)
+			err       error
+		)
 		Id := chi.URLParam(r, "id")
-		err := u.DB.Get(&user, "SELECT * FROM users WHERE id=?", Id)
+		user, err = modelUser.GetProfileById(Id)
 		if err != nil {
 			common.RespondError(w, http.StatusNotFound, err.Error())
 			return
 		}
 		common.RespondJSON(w, http.StatusOK, user)
+	}
+}
+
+func (u *Users) UpdateProfile() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var (
+			user      models.User
+			modelUser = models.NewUserModel(u.DB)
+			err       error
+		)
+		Id := chi.URLParam(r, "id")
+		user, err = modelUser.GetProfileById(Id)
+		if err != nil {
+			common.RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		decoder := json.NewDecoder(r.Body)
+		if err := decoder.Decode(&user); err != nil {
+			common.RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		defer r.Body.Close()
+		err = modelUser.UpdateProfile(user, Id)
+		if err != nil {
+			common.RespondError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		common.RespondJSON(w, http.StatusCreated, map[string]string{"message": "updated"})
 	}
 }

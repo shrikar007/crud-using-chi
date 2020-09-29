@@ -15,7 +15,7 @@ func GenerateJWT(user models.User,mySigningKey string) string {
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(mySigningKey)
+	tokenString, err := token.SignedString([]byte(mySigningKey))
 	if err != nil {
 		fmt.Println(err)
 		return ""
