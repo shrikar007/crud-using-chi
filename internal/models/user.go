@@ -20,10 +20,6 @@ type Login struct {
 	Password string `json:"password"`
 }
 
-type LoginResponse struct {
-	Token string `json:"token"`
-}
-
 type UserResource struct {
 	DB *sqlx.DB
 }

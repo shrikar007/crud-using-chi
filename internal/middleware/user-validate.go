@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"crud-using-chi/common"
-	"crud-using-chi/models"
+	"crud-using-chi/internal/models"
+	"crud-using-chi/pkg/common"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jmoiron/sqlx"
@@ -27,8 +27,12 @@ func NewMiddlerwareUser(conf *viper.Viper, logger *logrus.Logger, db *sqlx.DB) (
 	return
 }
 
-func (mu *MiddlewareUser)IsAuthorized(endpoint http.Handler) http.Handler {
+func (mu *MiddlewareUser) IsAuthorized(endpoint http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var (
+			modelAuth = models.NewAuthModel(mu.DB)
+			session   models.Session
+		)
 		if r.Header["Token"] != nil {
 			token, err := jwt.Parse(r.Header["Token"][0], func(token *jwt.Token) (interface{}, error) {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -36,12 +40,11 @@ func (mu *MiddlewareUser)IsAuthorized(endpoint http.Handler) http.Handler {
 				}
 				return []byte(mu.Conf.GetString("jwt.jwt_signing_key")), nil
 			})
-
 			if err != nil {
 				mu.Logger.Errorf("Error occured : %v", err)
 			}
-			mu.DB.Exec(&user, "SELECT * FROM users WHERE id=?", Id)
-			if token.Valid  {
+			session, err = modelAuth.GetSessionByToken(token.Raw)
+			if token.Valid && session.Valid {
 				token, _ := jwt.ParseWithClaims(token.Raw, &models.MyCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 					return []byte(mu.Conf.GetString("jwt.jwt_signing_key")), nil
 				})
@@ -51,9 +54,11 @@ func (mu *MiddlewareUser)IsAuthorized(endpoint http.Handler) http.Handler {
 
 			} else {
 				common.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+				return
 			}
 		} else {
 			common.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+			return
 		}
 	})
 }

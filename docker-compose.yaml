@@ -1,0 +1,42 @@
+version: "3.6"
+
+services:
+
+  crud-chi:
+    container_name: crud-using-chi
+    image: crud-using-chi
+    ports:
+      - 8081:8081
+    networks:
+      - crud-chi-network
+
+  mysql-server:
+    image: mysql:8.0.19
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - crud-chi-network
+#  phpmyadmin:
+#    image: phpmyadmin/phpmyadmin:5.0.1
+#    restart: always
+#    environment:
+#      PMA_HOST: mysql-server
+#      PMA_USER: root
+#      PMA_PASSWORD: root
+#    ports:
+#      - "8070:80"
+#    networks:
+#      - crud-chi-network
+
+
+networks:
+  crud-chi-network:
+    driver: bridge
+
+volumes:
+  mysql-data:

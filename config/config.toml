@@ -3,7 +3,7 @@ port        =   "8081"
 
 [database]
 db_driver   =   "mysql"
-db_host     =   "127.0.0.1"
+db_host     =   "mysql-server"
 db_name     =   "userdata"
 db_port     =   "3306"
 db_user     =   "root"

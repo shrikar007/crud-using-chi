@@ -1,7 +1,7 @@
 package main
 
 import (
-	"crud-using-chi/app"
+	"crud-using-chi/internal/app"
 	"fmt"
 	"log"
 	"net/http"

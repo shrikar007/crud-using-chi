@@ -2,10 +2,10 @@ package app
 
 import (
 	"crud-using-chi/config"
-	"crud-using-chi/contollers"
-	"crud-using-chi/database"
-	"crud-using-chi/logger"
-	user_middleware "crud-using-chi/middleware"
+	"crud-using-chi/internal/contollers"
+	"crud-using-chi/internal/database"
+	user_middleware "crud-using-chi/internal/middleware"
+	"crud-using-chi/pkg/logger"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
@@ -30,7 +30,11 @@ func Initialize() (r chi.Router, conf *viper.Viper) {
 	}
 	lg.Info("Config initialized")
 	lg.Info("Connecting to database")
-	DB = database.ConnectDb(lg, conf)
+	DB, err = database.ConnectDb(lg, conf)
+	if err != nil {
+		lg.Error(err)
+		return
+	}
 	lg.Info("Successfully connected to database")
 
 	user = contollers.NewUser(conf, lg, DB)
@@ -49,6 +53,7 @@ func Initialize() (r chi.Router, conf *viper.Viper) {
 	})
 	r.Group(func(r chi.Router) {
 		r.Use(muser.IsAuthorized)
+		r.Post("/logout", user.Logout())
 		r.Route("/users", func(r chi.Router) {
 			r.Get("/{id}", user.GetProfile())
 			r.Put("/{id}", user.UpdateProfile())

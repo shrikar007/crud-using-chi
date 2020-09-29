@@ -1,8 +1,8 @@
 package contollers
 
 import (
-	"crud-using-chi/common"
-	"crud-using-chi/models"
+	"crud-using-chi/internal/models"
+	"crud-using-chi/pkg/common"
 	"encoding/json"
 	"github.com/go-chi/chi"
 	"github.com/jmoiron/sqlx"
@@ -44,14 +44,33 @@ func (u *Users) Login() http.HandlerFunc {
 			common.RespondError(w, http.StatusNotFound, err.Error())
 			return
 		}
-		loginResponse := models.LoginResponse{Token: common.GenerateJWT(user, u.Conf.GetString("jwt.jwt_signing_key"))}
-		err = modelAuth.StoreAuth(loginResponse)
+		loginSession := models.Session{Token: common.GenerateJWT(user, u.Conf.GetString("jwt.jwt_signing_key"))}
+		err = modelAuth.StoreAuth(loginSession)
 		if err != nil {
 			common.RespondError(w, http.StatusNotFound, err.Error())
 			return
 		}
 
-		common.RespondJSON(w, http.StatusOK, loginResponse)
+		common.RespondJSON(w, http.StatusOK, map[string]string{"Token": loginSession.Token})
+	}
+}
+func (u *Users) Logout() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var (
+			modelAuth = models.NewAuthModel(u.DB)
+		)
+		token := r.Header["Token"]
+		session, err := modelAuth.GetSessionByToken(token[0])
+		if err != nil {
+			common.RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		err = modelAuth.UpdateAuthById(session.Id)
+		if err != nil {
+			common.RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		common.RespondJSON(w, http.StatusOK, map[string]string{"message": "logout successful"})
 	}
 }
 

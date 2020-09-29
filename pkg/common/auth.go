@@ -1,7 +1,7 @@
 package common
 
 import (
-	"crud-using-chi/models"
+	"crud-using-chi/internal/models"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"time"
