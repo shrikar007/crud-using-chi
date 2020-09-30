@@ -36,17 +36,20 @@ func (u *Users) Login() http.HandlerFunc {
 		)
 		decoder := json.NewDecoder(r.Body)
 		if err := decoder.Decode(&login); err != nil {
+			u.Logger.Error(err)
 			common.RespondError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		user, err := modelUser.GetUser(login)
 		if err != nil {
+			u.Logger.Error(err)
 			common.RespondError(w, http.StatusNotFound, err.Error())
 			return
 		}
 		loginSession := models.Session{Token: common.GenerateJWT(user, u.Conf.GetString("jwt.jwt_signing_key"))}
 		err = modelAuth.StoreAuth(loginSession)
 		if err != nil {
+			u.Logger.Error(err)
 			common.RespondError(w, http.StatusNotFound, err.Error())
 			return
 		}
@@ -62,11 +65,13 @@ func (u *Users) Logout() http.HandlerFunc {
 		token := r.Header["Token"]
 		session, err := modelAuth.GetSessionByToken(token[0])
 		if err != nil {
+			u.Logger.Error(err)
 			common.RespondError(w, http.StatusNotFound, err.Error())
 			return
 		}
 		err = modelAuth.UpdateAuthById(session.Id)
 		if err != nil {
+			u.Logger.Error(err)
 			common.RespondError(w, http.StatusNotFound, err.Error())
 			return
 		}
@@ -82,12 +87,14 @@ func (u *Users) SignUp() http.HandlerFunc {
 		)
 		decoder := json.NewDecoder(r.Body)
 		if err := decoder.Decode(&user); err != nil {
+			u.Logger.Error(err)
 			common.RespondError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		defer r.Body.Close()
 		err := modelUser.StoreUser(user)
 		if err != nil {
+			u.Logger.Error(err)
 			common.RespondError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -105,6 +112,7 @@ func (u *Users) GetProfile() http.HandlerFunc {
 		Id := chi.URLParam(r, "id")
 		user, err = modelUser.GetProfileById(Id)
 		if err != nil {
+			u.Logger.Error(err)
 			common.RespondError(w, http.StatusNotFound, err.Error())
 			return
 		}
@@ -122,17 +130,20 @@ func (u *Users) UpdateProfile() http.HandlerFunc {
 		Id := chi.URLParam(r, "id")
 		user, err = modelUser.GetProfileById(Id)
 		if err != nil {
+			u.Logger.Error(err)
 			common.RespondError(w, http.StatusNotFound, err.Error())
 			return
 		}
 		decoder := json.NewDecoder(r.Body)
 		if err := decoder.Decode(&user); err != nil {
+			u.Logger.Error(err)
 			common.RespondError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		defer r.Body.Close()
 		err = modelUser.UpdateProfile(user, Id)
 		if err != nil {
+			u.Logger.Error(err)
 			common.RespondError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
