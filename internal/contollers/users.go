@@ -4,11 +4,13 @@ import (
 	"crud-using-chi/internal/models"
 	"crud-using-chi/pkg/common"
 	"encoding/json"
+	"errors"
 	"github.com/go-chi/chi"
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"net/http"
+	"strconv"
 )
 
 type (
@@ -148,5 +150,41 @@ func (u *Users) UpdateProfile() http.HandlerFunc {
 			return
 		}
 		common.RespondJSON(w, http.StatusCreated, map[string]string{"message": "updated"})
+	}
+}
+
+func (u *Users) UserReport() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var (
+			users     = []models.User{}
+			modelUser = models.NewUserModel(u.DB)
+		)
+		users, err := modelUser.GetProfiles()
+		if users == nil || err != nil {
+			u.Logger.Error("no data found")
+			common.RespondError(w, http.StatusNotFound, errors.New("no data found").Error())
+			return
+		}
+		header := []string{"ID", "FirstName", "MiddleName", "LastName", "Email", "Gender", "Mobile"}
+		data := [][]string{header}
+		for _, row := range users {
+			var user = []string{}
+			user = append(user, strconv.FormatUint(uint64(row.Id), 10))
+			user = append(user, row.FirstName)
+			user = append(user, row.MiddleName)
+			user = append(user, row.LastName)
+			user = append(user, row.Email)
+			user = append(user, row.Gender)
+			user = append(user, row.Mobile)
+			data = append(data, user)
+		}
+		err = common.GenerateCSV("users", data)
+		if err != nil {
+			u.Logger.Error(err)
+			common.RespondError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		message := []string{"CSV Generated Successfully"}
+		common.RespondJSON(w, http.StatusOK, message)
 	}
 }

@@ -60,3 +60,11 @@ func (u *UserResource) UpdateProfile(user User, Id string) (err error) {
 	}
 	return
 }
+
+func (u *UserResource) GetProfiles() (user []User, err error) {
+	err = u.DB.Select(&user, "SELECT * FROM users")
+	if err != nil {
+		return
+	}
+	return
+}
